@@ -5,6 +5,8 @@ int main()
 {
     while (true) {
 
+        // code will go here
+
     }
 }
 
