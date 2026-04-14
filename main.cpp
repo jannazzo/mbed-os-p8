@@ -2,7 +2,7 @@
  * Copyright (c) 2019 ARM Limited
  * SPDX-License-Identifier: Apache-2.0
  */
- 
+
 #include "mbed.h"
 #include <cstdio>
 #include <iostream>
@@ -12,12 +12,12 @@ AnalogIn TemperatureSensor(PA_1); //CN8/A1
 // PC_1 is CN8/A4
 InterruptIn UP_BUTTON(PB_5); //CN5/D4
 InterruptIn DOWN_BUTTON(PA_10); //CN5/D2
-DigitalOut OUTPUT(PB_4); //CN9/D5
+// DigitalOut OUTPUT(PB_4); //CN9/D5
 DigitalOut led(LED1);
- 
+
 #define Vsupply 3.3f // The microcontroller supplies 3.3 V
 
-float TargetTempLevel = 1; // default the target temp to 1
+int TargetTempLevel = 1; // default the target temp to 1
 
 //variables for temperature sensor
 float TemperatureSensorDigiValue; //the A/D converter value read by the controller input pin
@@ -27,7 +27,6 @@ float ThermistorTemperature; //approximate ambient temperature measured by therm
 #define ThermistorBiasResistor 10000.0f //Bias resistor (lower leg of voltage divider) for thermistor
 
 // Variables to hold control reference values.
-// STUDENT: EDIT THESE VALUES
 float TemperatureLimit = 26; //enter a temperature in Celsius here for temperature deactivation; NOTE: room temperature is 25C
 
 // This function will be attached to the start button interrupt.
@@ -42,7 +41,6 @@ void UpPressed(void)
 // This function will be attached to the stop button interrupt.
 void DownPressed(void)
 {
-    // STUDENT: EDIT HERE
     cout << "Target Temperature Decreased." << endl;
     if (TargetTempLevel < 1) {
         TargetTempLevel -= 1;
@@ -53,7 +51,6 @@ void DownPressed(void)
 // in Celsius based on a linear approximation of the thermistor.
 float getThermistorTemperature(void)
 {
-	// STUDENT: EDIT HERE
 	// 1. Read the TemperatureSensor A/D value and store it in TemperatureSensorDigiValue
 	// 2. Calculate TemperatureSensorVoltValue from TemperatureSensorDigiValue and Vsupply
 	// 3. Calculate ThermistorResistance using the voltage divider equation
@@ -75,7 +72,6 @@ void CheckTemperatureSensor(void)
     if (getThermistorTemperature() >= TemperatureLimit) {
         cout << "Temperature Stop!" << endl;
         led = 0;
-        OUTPUT = 0;
     }
 }
 
@@ -90,8 +86,8 @@ int main(void)
     event_thread.start(callback(&event_queue, &EventQueue::dispatch_forever));
     // Attach the functions to the hardware interrupt pins to be inserted into
     // the event queue and exicuted on button press.
-    START_BUTTON.rise(event_queue.event(&StartPressed));
-    STOP_BUTTON.rise(event_queue.event(&StopPressed));
+    UP_BUTTON.rise(event_queue.event(&UpPressed));
+    DOWN_BUTTON.rise(event_queue.event(&DownPressed));
 
     while(true) {
         // Check the analog inputs.
