@@ -16,7 +16,9 @@ DigitalOut OUTPUT(PB_4); //CN9/D5
 DigitalOut led(LED1);
  
 #define Vsupply 3.3f // The microcontroller supplies 3.3 V
- 
+
+float TargetTempLevel = 1; // default the target temp to 1
+
 //variables for temperature sensor
 float TemperatureSensorDigiValue; //the A/D converter value read by the controller input pin
 float TemperatureSensorVoltValue; //the voltage on the controller input pin (across the 10k resistor) from the temperature sensor voltage divider
@@ -32,8 +34,9 @@ float TemperatureLimit = 26; //enter a temperature in Celsius here for temperatu
 void UpPressed(void)
 {
     cout << "Target Temperature Increased." << endl;
-    led = 1;
-    OUTPUT = 1;
+    if (TargetTempLevel < 3) {
+        TargetTempLevel += 1;
+    }
 }
 
 // This function will be attached to the stop button interrupt.
@@ -41,8 +44,9 @@ void DownPressed(void)
 {
     // STUDENT: EDIT HERE
     cout << "Target Temperature Decreased." << endl;
-    led = 0;
-    OUTPUT = 0;
+    if (TargetTempLevel < 1) {
+        TargetTempLevel -= 1;
+    }
 }
  
 // This function converts the voltage value from the thermistor input to an approximate temperature
@@ -95,6 +99,7 @@ int main(void)
        
         // output measured temperature for debugging
         cout << "\rCurrent Temperature Value: " << getThermistorTemperature() << endl;
+        cout << "\r Current Temp Level: " << TargetTempLevel << endl;
         cout << "\rUp Button: " << UP_BUTTON.read() << endl;
         cout << "\rDown Button: " << DOWN_BUTTON.read() << endl;
        
