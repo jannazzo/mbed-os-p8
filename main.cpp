@@ -13,6 +13,7 @@ AnalogIn TemperatureSensor(PA_1); //CN8/A1
 InterruptIn UP_BUTTON(PB_5); //CN5/D4
 InterruptIn DOWN_BUTTON(PA_10); //CN5/D2
 // DigitalOut OUTPUT(PB_4); //CN9/D5
+PwmOut fan(PB_3); //D3 PWM header for fan
 DigitalOut led(LED1);
 
 #define Vsupply 3.3f // The microcontroller supplies 3.3 V
@@ -89,11 +90,17 @@ int main(void)
     UP_BUTTON.rise(event_queue.event(&UpPressed));
     DOWN_BUTTON.rise(event_queue.event(&DownPressed));
 
+    fan.period(0.00004); // PWM frequency = 25 kHz
+    fan.write(0.50); // default PWM to 50%
+
     while(true) {
         // Check the analog inputs.
         CheckTemperatureSensor();
+
+        fan.write(TargetTempLevel * 0.30);
        
         // output measured temperature for debugging
+        cout << "\n" << endl; // newline to separate cycles
         cout << "\rCurrent Temperature Value: " << getThermistorTemperature() << endl;
         cout << "\r Current Temp Level: " << TargetTempLevel << endl;
         cout << "\rUp Button: " << UP_BUTTON.read() << endl;
