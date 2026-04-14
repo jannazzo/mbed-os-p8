@@ -10,8 +10,8 @@
 // PA_0 is CN8/A0
 AnalogIn TemperatureSensor(PA_1); //CN8/A1
 // PC_1 is CN8/A4
-InterruptIn START_BUTTON(PB_5); //CN5/D4
-InterruptIn STOP_BUTTON(PA_10); //CN5/D2
+InterruptIn UP_BUTTON(PB_5); //CN5/D4
+InterruptIn DOWN_BUTTON(PA_10); //CN5/D2
 DigitalOut OUTPUT(PB_4); //CN9/D5
 DigitalOut led(LED1);
  
@@ -29,18 +29,18 @@ float ThermistorTemperature; //approximate ambient temperature measured by therm
 float TemperatureLimit = 26; //enter a temperature in Celsius here for temperature deactivation; NOTE: room temperature is 25C
 
 // This function will be attached to the start button interrupt.
-void StartPressed(void)
+void UpPressed(void)
 {
-    cout << "Start!" << endl;
+    cout << "Target Temperature Increased." << endl;
     led = 1;
     OUTPUT = 1;
 }
 
 // This function will be attached to the stop button interrupt.
-void StopPressed(void)
+void DownPressed(void)
 {
     // STUDENT: EDIT HERE
-    cout << "Stop!" << endl;
+    cout << "Target Temperature Decreased." << endl;
     led = 0;
     OUTPUT = 0;
 }
@@ -95,8 +95,8 @@ int main(void)
        
         // output measured temperature for debugging
         cout << "\rCurrent Temperature Value: " << getThermistorTemperature() << endl;
-        // cout << "\rStart Button: " << START_BUTTON.read() << endl;
-        // cout << "\rStop Button: " << STOP_BUTTON.read() << endl;
+        cout << "\rUp Button: " << UP_BUTTON.read() << endl;
+        cout << "\rDown Button: " << DOWN_BUTTON.read() << endl;
        
         wait_us(1000000); // Wait 1 second before repeating the loop.
     }
