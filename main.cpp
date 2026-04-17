@@ -127,19 +127,19 @@ int main(void)
         // Check the analog inputs.
         CheckTemperatureSensor();
 
+        // set the LEDs for the temperature level
+        setStrip(temp_red, temp_yellow, temp_green, TargetTempLevel);
+
         fan.write(0.05 + TargetTempLevel * 0.10);
        
         // output measured temperature for debugging
         //cout << "\n" << endl; // newline to separate cycles
         printf("\n");
-        //cout << "\rCurrent Temperature Value: " << getThermistorTemperature() << endl;
         printf("\nCurrent Temperature Value: %f", getThermistorTemperature());
-        //cout << "\rCurrent Temp Level: " << TargetTempLevel << endl;
         printf("\nCurrent Temp Level: %i", TargetTempLevel);
-        //cout << "\rUp Button: " << UP_BUTTON.read() << endl;
         printf("\nUp Button: %i", UP_BUTTON.read());
-        //cout << "\rDown Button: " << DOWN_BUTTON.read() << endl;
         printf("\nDown Button: %i", DOWN_BUTTON.read());
+        printf("\n");
         
         wait_us(1000000); // Wait 1 second before repeating the loop.
     }
