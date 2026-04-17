@@ -16,6 +16,15 @@ InterruptIn DOWN_BUTTON(PA_10); //CN5/D2
 PwmOut fan(PB_3); //D3 PWM header for fan
 DigitalOut led(LED1);
 
+// LEDs are connected to CN10 pins
+DigitalOut temp_red(PC_8);
+DigitalOut temp_yellow(PC_6);
+DigitalOut temp_green(PC_5);
+
+DigitalOut fan_red(PA_12);
+DigitalOut fan_yellow(PA_11);
+DigitalOut fan_green(PB_12);
+
 
 #define Vsupply 3.3f // The microcontroller supplies 3.3 V
 
