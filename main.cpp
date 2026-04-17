@@ -16,6 +16,7 @@ InterruptIn DOWN_BUTTON(PA_10); //CN5/D2
 PwmOut fan(PB_3); //D3 PWM header for fan
 DigitalOut led(LED1);
 
+
 #define Vsupply 3.3f // The microcontroller supplies 3.3 V
 
 int TargetTempLevel = 1; // default the target temp to 1
@@ -43,8 +44,28 @@ void UpPressed(void)
 void DownPressed(void)
 {
     cout << "Target Temperature Decreased." << endl;
-    if (TargetTempLevel < 1) {
+    if (TargetTempLevel > 1) {
         TargetTempLevel -= 1;
+    }
+}
+
+// level variable will always be TargetTempLevel
+void setStrip(DigitalOut &red, DigitalOut &yellow, DigitalOut &green, int level)
+{
+    
+    red = 0;
+    yellow = 0;
+    green = 0;
+
+    if (level == 3) {
+        red = 1;
+        yellow =1;
+        green = 1;
+    } else if (level == 2) {
+        yellow = 1;
+        green = 1;
+    } else {
+        green = 1;
     }
 }
  
@@ -91,21 +112,26 @@ int main(void)
     DOWN_BUTTON.rise(event_queue.event(&DownPressed));
 
     fan.period(0.00004); // PWM frequency = 25 kHz
-    fan.write(0.50); // default PWM to 50%
+    fan.write(0.15); // default PWM to 15%
 
     while(true) {
         // Check the analog inputs.
         CheckTemperatureSensor();
 
-        fan.write(TargetTempLevel * 0.30);
+        fan.write(0.05 + TargetTempLevel * 0.10);
        
         // output measured temperature for debugging
-        cout << "\n" << endl; // newline to separate cycles
-        cout << "\rCurrent Temperature Value: " << getThermistorTemperature() << endl;
-        cout << "\r Current Temp Level: " << TargetTempLevel << endl;
-        cout << "\rUp Button: " << UP_BUTTON.read() << endl;
-        cout << "\rDown Button: " << DOWN_BUTTON.read() << endl;
-       
+        //cout << "\n" << endl; // newline to separate cycles
+        printf("\n");
+        //cout << "\rCurrent Temperature Value: " << getThermistorTemperature() << endl;
+        printf("\nCurrent Temperature Value: %f", getThermistorTemperature());
+        //cout << "\rCurrent Temp Level: " << TargetTempLevel << endl;
+        printf("\nCurrent Temp Level: %i", TargetTempLevel);
+        //cout << "\rUp Button: " << UP_BUTTON.read() << endl;
+        printf("\nUp Button: %i", UP_BUTTON.read());
+        //cout << "\rDown Button: " << DOWN_BUTTON.read() << endl;
+        printf("\nDown Button: %i", DOWN_BUTTON.read());
+        
         wait_us(1000000); // Wait 1 second before repeating the loop.
     }
 }
