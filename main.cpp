@@ -6,6 +6,7 @@
 #include "mbed.h"
 #include <cstdio>
 #include <iostream>
+#include <cmath>
  
 // PA_0 is CN8/A0
 AnalogIn TemperatureSensor(PA_1); //CN8/A1
@@ -26,7 +27,7 @@ DigitalOut fan_yellow(PA_11);
 DigitalOut fan_green(PB_12);
 
 
-#define Vsupply 3.3f // The microcontroller supplies 3.3 V
+#define Vsupply 3.32f // The microcontroller supplies 3.3 V
 
 int TargetTempLevel = 1; // default the target temp to 1
 
@@ -35,7 +36,7 @@ float TemperatureSensorDigiValue; //the A/D converter value read by the controll
 float TemperatureSensorVoltValue; //the voltage on the controller input pin (across the 10k resistor) from the temperature sensor voltage divider
 float ThermistorResistance; //computed from the voltage drop value across the thermistor
 float ThermistorTemperature; //approximate ambient temperature measured by thermistor
-#define ThermistorBiasResistor 10000.0f //Bias resistor (lower leg of voltage divider) for thermistor
+#define ThermistorBiasResistor 9850.0f //Bias resistor (lower leg of voltage divider) for thermistor
 
 // Variables to hold control reference values.
 float TemperatureLimit = 26; //enter a temperature in Celsius here for temperature deactivation; NOTE: room temperature is 25C
@@ -86,16 +87,26 @@ float getThermistorTemperature(void)
 	// 2. Calculate TemperatureSensorVoltValue from TemperatureSensorDigiValue and Vsupply
 	// 3. Calculate ThermistorResistance using the voltage divider equation
 
+    // debug lines for temperature calibration
     TemperatureSensorDigiValue = TemperatureSensor.read();
+    printf("\nThermistor Digital Value: %f", TemperatureSensorDigiValue);
     TemperatureSensorVoltValue = TemperatureSensorDigiValue*Vsupply;
-    ThermistorResistance = TemperatureSensorVoltValue*ThermistorBiasResistor/(Vsupply - TemperatureSensorVoltValue);
+    printf("\nThermistor Voltage Value: %f", TemperatureSensorVoltValue);
+    //ThermistorResistance = TemperatureSensorVoltValue*ThermistorBiasResistor/(Vsupply - TemperatureSensorVoltValue);
+    ThermistorResistance = ThermistorBiasResistor * (Vsupply - TemperatureSensorVoltValue) / TemperatureSensorVoltValue;
+    printf("\nThermistor Resistance: %f", ThermistorResistance);
 
+    printf("\n");
     // changed order of bias and thermistor resistance to scale correctly
-    ThermistorTemperature = ((ThermistorResistance - 10000.0)/(1000.0)) + 25.0; //temperature of the thermistor computed by a linear approximation of the device response
+    ThermistorTemperature = ((ThermistorResistance - 10000.0)/(-320.0)) + 25.0; //temperature of the thermistor computed by a linear approximation of the device response
+
+    // compute Thermistor temperature in Kelvin using the proper function
+    float AltThermistorTemperature = (3977 / ( log(ThermistorResistance) - log(10700) + (3977 / 298.15) )) - 273.15;
+    printf("Alt Thermistor Temperature: %f", AltThermistorTemperature);
 
     return ThermistorTemperature;
 }
- 
+
 // This function will check for a temperature triggered deactivation of the motor
 void CheckTemperatureSensor(void)
 {
@@ -120,25 +131,29 @@ int main(void)
     UP_BUTTON.rise(event_queue.event(&UpPressed));
     DOWN_BUTTON.rise(event_queue.event(&DownPressed));
 
+    float dutyCycle = 0.15;
     fan.period(0.00004); // PWM frequency = 25 kHz
-    fan.write(0.15); // default PWM to 15%
+    fan.write(dutyCycle); // default PWM to 15%
 
     while(true) {
         // Check the analog inputs.
-        CheckTemperatureSensor();
+
+        //CheckTemperatureSensor();
 
         // set the LEDs for the temperature level
         setStrip(temp_red, temp_yellow, temp_green, TargetTempLevel);
 
-        fan.write(0.05 + TargetTempLevel * 0.10);
+        dutyCycle = 0.05 + TargetTempLevel * 0.10;
+        fan.write(dutyCycle);
        
         // output measured temperature for debugging
         //cout << "\n" << endl; // newline to separate cycles
         printf("\n");
         printf("\nCurrent Temperature Value: %f", getThermistorTemperature());
         printf("\nCurrent Temp Level: %i", TargetTempLevel);
-        printf("\nUp Button: %i", UP_BUTTON.read());
-        printf("\nDown Button: %i", DOWN_BUTTON.read());
+        printf("\nDuty Cycle: %f", dutyCycle);
+        //printf("\nUp Button: %i", UP_BUTTON.read());
+        //printf("\nDown Button: %i", DOWN_BUTTON.read());
         printf("\n");
         
         wait_us(1000000); // Wait 1 second before repeating the loop.
