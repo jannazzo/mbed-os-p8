@@ -7,7 +7,9 @@
 #include <cstdio>
 #include <iostream>
 #include <cmath>
- 
+
+#include "lcd_driver.h"
+
 // PA_0 is CN8/A0
 AnalogIn TemperatureSensor(PA_1); //CN8/A1
 // PC_1 is CN8/A4
@@ -30,6 +32,7 @@ DigitalOut fan_green(PB_12);
 #define Vsupply 3.32f // The microcontroller supplies 3.3 V
 
 int TargetTempLevel = 1; // default the target temp to 1
+int FanSpeedLevel = 1; // default to 1
 
 //variables for temperature sensor
 float TemperatureSensorDigiValue; //the A/D converter value read by the controller input pin
@@ -44,7 +47,7 @@ float TemperatureLimit = 26; //enter a temperature in Celsius here for temperatu
 // This function will be attached to the start button interrupt.
 void UpPressed(void)
 {
-    cout << "Target Temperature Increased." << endl;
+    printf("Target Temperature Increased.\n");
     if (TargetTempLevel < 3) {
         TargetTempLevel += 1;
     }
@@ -53,10 +56,14 @@ void UpPressed(void)
 // This function will be attached to the stop button interrupt.
 void DownPressed(void)
 {
-    cout << "Target Temperature Decreased." << endl;
+    printf("Target Temperature Decreased.\n");
     if (TargetTempLevel > 1) {
         TargetTempLevel -= 1;
     }
+}
+
+float cToF(float tempC) {
+    return (tempC * 9.0f / 5.0f) + 32.0f;
 }
 
 // level variable will always be TargetTempLevel
@@ -78,6 +85,8 @@ void setStrip(DigitalOut &red, DigitalOut &yellow, DigitalOut &green, int level)
         green = 1;
     }
 }
+
+
  
 // This function converts the voltage value from the thermistor input to an approximate temperature
 // in Celsius based on a linear approximation of the thermistor.
@@ -107,13 +116,33 @@ float getThermistorTemperature(void)
     return ThermistorTemperature;
 }
 
-// This function will check for a temperature triggered deactivation of the motor
-void CheckTemperatureSensor(void)
-{
-    // Use the getThermistorTemperature() function defined above to obtain a temperature value to use for comparison and decision making with your TemperatureLimit
-    if (getThermistorTemperature() >= TemperatureLimit) {
-        cout << "Temperature Stop!" << endl;
-        led = 0;
+float targetTemp(int TargetTempLevel) {
+    if (TargetTempLevel == 1) {
+        return 27.0f; // TARGET TEMP FOR LEVEL 1
+    } else if (TargetTempLevel == 2) {
+        return 29.0f; // TARGET TEMP FOR LEVEL 2
+    } else if (TargetTempLevel == 3) {
+        return 31.0f; // TARGET TEMP FOR LEVEL 3
+    } else {
+        return 27.0f; // default value is level 1
+    }
+}
+
+int setFanSpeed(int TargetTempLevel) {
+    // based on the target temp level, adjust the fan speed based on the size of the differential
+    float tempC = getThermistorTemperature();
+
+    float target = targetTemp(TargetTempLevel);
+    float diff = target - tempC;
+
+    if (diff <= 1.0) {
+        return 1; // slowest fan speed
+    } else if (diff <= 4.0) {
+        return 2;
+    } else if (diff > 4.0) {
+        return 3;
+    } else {
+        return 1; // default
     }
 }
 
@@ -131,30 +160,36 @@ int main(void)
     UP_BUTTON.rise(event_queue.event(&UpPressed));
     DOWN_BUTTON.rise(event_queue.event(&DownPressed));
 
+    // set up the PWM fan
     float dutyCycle = 0.15;
     fan.period(0.00004); // PWM frequency = 25 kHz
     fan.write(dutyCycle); // default PWM to 15%
 
-    while(true) {
-        // Check the analog inputs.
+    // initialize the LCD screen
+    I2CLCD lcd(D14, D15, 0x27 << 1);
+    initializeLCD(lcd);
 
-        //CheckTemperatureSensor();
+    while(true) {
 
         // set the LEDs for the temperature level
         setStrip(temp_red, temp_yellow, temp_green, TargetTempLevel);
 
-        dutyCycle = 0.05 + TargetTempLevel * 0.10;
+        // check what the fan speed should be
+        FanSpeedLevel = setFanSpeed(TargetTempLevel);
+        // the setFanSpeed function handles reading the temperature
+
+        dutyCycle = 0.05 + FanSpeedLevel * 0.10;
         fan.write(dutyCycle);
        
         // output measured temperature for debugging
-        //cout << "\n" << endl; // newline to separate cycles
         printf("\n");
         printf("\nCurrent Temperature Value: %f", getThermistorTemperature());
         printf("\nCurrent Temp Level: %i", TargetTempLevel);
         printf("\nDuty Cycle: %f", dutyCycle);
-        //printf("\nUp Button: %i", UP_BUTTON.read());
-        //printf("\nDown Button: %i", DOWN_BUTTON.read());
         printf("\n");
+
+        // print to the screen
+        updateLCDvalues(lcd, cToF(getThermistorTemperature()));
         
         wait_us(1000000); // Wait 1 second before repeating the loop.
     }
