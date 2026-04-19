@@ -133,7 +133,7 @@ int setFanSpeed(int TargetTempLevel) {
     float tempC = getThermistorTemperature();
 
     float target = targetTemp(TargetTempLevel);
-    float diff = target - tempC;
+    float diff = tempC - target;
 
     if (diff <= 1.0) {
         return 1; // slowest fan speed
