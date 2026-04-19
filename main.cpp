@@ -98,22 +98,22 @@ float getThermistorTemperature(void)
 
     // debug lines for temperature calibration
     TemperatureSensorDigiValue = TemperatureSensor.read();
-    printf("\nThermistor Digital Value: %f", TemperatureSensorDigiValue);
+    //printf("\nThermistor Digital Value: %f", TemperatureSensorDigiValue);
     TemperatureSensorVoltValue = TemperatureSensorDigiValue*Vsupply;
-    printf("\nThermistor Voltage Value: %f", TemperatureSensorVoltValue);
+    //printf("\nThermistor Voltage Value: %f", TemperatureSensorVoltValue);
     //ThermistorResistance = TemperatureSensorVoltValue*ThermistorBiasResistor/(Vsupply - TemperatureSensorVoltValue);
     ThermistorResistance = ThermistorBiasResistor * (Vsupply - TemperatureSensorVoltValue) / TemperatureSensorVoltValue;
-    printf("\nThermistor Resistance: %f", ThermistorResistance);
+    //printf("\nThermistor Resistance: %f", ThermistorResistance);
 
-    printf("\n");
+    //printf("\n");
     // changed order of bias and thermistor resistance to scale correctly
-    ThermistorTemperature = ((ThermistorResistance - 10000.0)/(-320.0)) + 25.0; //temperature of the thermistor computed by a linear approximation of the device response
+    //ThermistorTemperature = ((ThermistorResistance - 10000.0)/(-320.0)) + 25.0; //temperature of the thermistor computed by a linear approximation of the device response
 
     // compute Thermistor temperature in Kelvin using the proper function
     float AltThermistorTemperature = (3977 / ( log(ThermistorResistance) - log(10700) + (3977 / 298.15) )) - 273.15;
-    printf("Alt Thermistor Temperature: %f", AltThermistorTemperature);
+    //printf("Alt Thermistor Temperature: %f", AltThermistorTemperature);
 
-    return ThermistorTemperature;
+    return AltThermistorTemperature;
 }
 
 float targetTemp(int TargetTempLevel) {
@@ -177,6 +177,7 @@ int main(void)
         // check what the fan speed should be
         FanSpeedLevel = setFanSpeed(TargetTempLevel);
         // the setFanSpeed function handles reading the temperature
+        setStrip(fan_red, fan_yellow, fan_green, FanSpeedLevel); // set the fan strip lights as well
 
         dutyCycle = 0.05 + FanSpeedLevel * 0.10;
         fan.write(dutyCycle);
@@ -185,6 +186,7 @@ int main(void)
         printf("\n");
         printf("\nCurrent Temperature Value: %f", getThermistorTemperature());
         printf("\nCurrent Temp Level: %i", TargetTempLevel);
+        printf("\nCurrent Fan Level: %i", FanSpeedLevel);
         printf("\nDuty Cycle: %f", dutyCycle);
         printf("\n");
 
