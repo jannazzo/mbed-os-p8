@@ -29,6 +29,8 @@ DigitalOut fan_red(PA_12);
 DigitalOut fan_yellow(PA_11);
 DigitalOut fan_green(PB_12);
 
+Timer buttonTimer; // used for debouncing buttons
+
 #define Vsupply 3.32f // The microcontroller supplies 3.3 V
 
 int TargetTempLevel = 1; // default the target temp to 1
@@ -49,6 +51,12 @@ float TemperatureLimit = 26; //enter a temperature in Celsius here for temperatu
 // This function will be attached to the start button interrupt.
 void UpPressed(void)
 {
+    // debouncing
+    static int lastPress = 0;
+    int now = buttonTimer.read_ms();
+    if (now - lastPress < 200) return;
+    lastPress = now;
+
     printf("Target Temperature Increased.\n");
     if (TargetTempLevel < 3) {
         TargetTempLevel += 1;
@@ -58,6 +66,12 @@ void UpPressed(void)
 // This function will be attached to the stop button interrupt.
 void DownPressed(void)
 {
+    // debouncing
+    static int lastPress = 0;
+    int now = buttonTimer.read_ms();
+    if (now - lastPress < 200) return;
+    lastPress = now;
+
     printf("Target Temperature Decreased.\n");
     if (TargetTempLevel > 1) {
         TargetTempLevel -= 1;
@@ -67,6 +81,12 @@ void DownPressed(void)
 // This function will be attached to the status button interrupt.
 void StatusPressed(void)
 {
+    // debouncing
+    static int lastPress = 0;
+    int now = buttonTimer.read_ms();
+    if (now - lastPress < 200) return;
+    lastPress = now;
+
     status = !status; // flip the status
     printf("Status Toggled: %d\n", status);
 }
@@ -161,6 +181,8 @@ int setFanSpeed(int TargetTempLevel) {
 int main(void)
 {
 
+    buttonTimer.start(); // start the timer that's used for debouncing
+    
     // Setup an event queue to handle event requests for the ISR
     // and issue the callback in the event thread.
     EventQueue event_queue;
