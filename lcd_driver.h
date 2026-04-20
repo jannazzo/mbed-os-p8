@@ -30,6 +30,6 @@ public:
 };
 
 void initializeLCD(I2CLCD &lcd);
-void updateLCDvalues(I2CLCD &lcd, float currentTempF);
+void updateLCDvalues(I2CLCD &lcd, float currentTempC, float targetTempC, float dutyCycle);
 
 #endif // I2C_H

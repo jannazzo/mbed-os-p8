@@ -89,75 +89,8 @@ void I2CLCD::printPadded(const char *str, int width) {
 }
 
 // ==========================================================
-// CIRCUIT INPUTS
-// ==========================================================
-
-DigitalOut OUTPUT(PB_4);
-
-std::atomic_bool startFlag(false);
-std::atomic_bool stopFlag(false);
-
-// ==========================================================
-// SYSTEM VARIABLES
-// ==========================================================
-
-float currentTempC = 25.0f;
-float currentTempF = 77.0f;
-float targetTempF  = 68.0f;
-int fanLevel       = 0;
-bool overrideMode  = false;
-bool coolingActive = false;
-
-// Timer variables
-Timer coolingTimer;
-bool timerRunning = false;
-bool targetReached = false;
-float elapsedTimeSec = 0.0f;
-
-// ==========================================================
-// INTERRUPTS
-// ==========================================================
-
-void isrStart() { startFlag.store(true); }
-void isrStop()  { stopFlag.store(true); }
-
-// ==========================================================
-// SENSOR FUNCTION
-// ==========================================================
-
-
-// ==========================================================
 // DISPLAY HELPERS
 // ==========================================================
-
-const char* fanText(int level) {
-    switch (level) {
-        case 0: return "OFF";
-        case 1: return "LOW";
-        case 2: return "MED";
-        case 3: return "HIGH";
-        default: return "ERR";
-    }
-}
-
-const char* modeText() {
-    if (overrideMode) return "OVERRIDE";
-    if (targetReached) return "AT TEMP";
-    if (coolingActive) return "COOLING";
-    return "IDLE";
-}
-
-void updateFanLevel(float tempF) {
-    if (!coolingActive) {
-        fanLevel = 0;
-    } else if (tempF < targetTempF + 2.0f) {
-        fanLevel = 1;
-    } else if (tempF < targetTempF + 5.0f) {
-        fanLevel = 2;
-    } else {
-        fanLevel = 3;
-    }
-}
 
 void formatTemp(char *buffer, size_t size, float value) {
     int whole = (int)value;
@@ -171,68 +104,6 @@ void formatElapsedTime(char *buffer, size_t size, float seconds) {
     int mins = total / 60;
     int secs = total % 60;
     snprintf(buffer, size, "%02d:%02d", mins, secs);
-}
-
-void updateLCD(I2CLCD &lcd) {
-    char line[21];
-    char tempStr[10];
-    char setStr[10];
-    char timeStr[10];
-
-    formatTemp(tempStr, sizeof(tempStr), currentTempF);
-    formatTemp(setStr, sizeof(setStr), targetTempF);
-    formatElapsedTime(timeStr, sizeof(timeStr), elapsedTimeSec);
-
-    lcd.setCursor(0, 0);
-    snprintf(line, sizeof(line), "Temp:%sF Set:%s", tempStr, setStr);
-    lcd.printPadded(line);
-
-    lcd.setCursor(0, 1);
-    snprintf(line, sizeof(line), "Fan:%-4s Out:%-3s", fanText(fanLevel), OUTPUT.read() ? "ON" : "OFF");
-    lcd.printPadded(line);
-
-    lcd.setCursor(0, 2);
-    snprintf(line, sizeof(line), "Time to set:%s", timeStr);
-    lcd.printPadded(line);
-
-    lcd.setCursor(0, 3);
-    snprintf(line, sizeof(line), "Mode:%-8s", modeText());
-    lcd.printPadded(line);
-}
-
-// ==========================================================
-// TIMER LOGIC
-// ==========================================================
-
-void updateCoolingTimer() {
-    // Start timer only when cooling is active and temp is above target
-    if (coolingActive && currentTempF > targetTempF) {
-        if (!timerRunning && !targetReached) {
-            coolingTimer.reset();
-            coolingTimer.start();
-            timerRunning = true;
-        }
-    }
-
-    // If timer is running, keep track of elapsed time
-    if (timerRunning) {
-        elapsedTimeSec = std::chrono::duration<float>(coolingTimer.elapsed_time()).count();
-    }
-
-    // Stop timer once target temperature is reached
-    if (timerRunning && currentTempF <= targetTempF) {
-        coolingTimer.stop();
-        elapsedTimeSec = std::chrono::duration<float>(coolingTimer.elapsed_time()).count();
-        timerRunning = false;
-        targetReached = true;
-    }
-
-    // If cooling is stopped manually, stop timer
-    if (!coolingActive && timerRunning) {
-        coolingTimer.stop();
-        elapsedTimeSec = std::chrono::duration<float>(coolingTimer.elapsed_time()).count();
-        timerRunning = false;
-    }
 }
 
 // ==========================================================
@@ -251,8 +122,27 @@ void initializeLCD(I2CLCD &lcd) {
     lcd.clear();
 }
 
-void updateLCDvalues(I2CLCD &lcd, float currentTempF) {
-    updateFanLevel(currentTempF);
-    updateCoolingTimer();
-    updateLCD(lcd);
+void updateLCDvalues(I2CLCD &lcd, float currentTempC, float targetTempC, float dutyCycle) {
+    char line[21];
+    char curStr[10];
+    char tgtStr[10];
+
+    formatTemp(curStr, sizeof(curStr), currentTempC);
+    formatTemp(tgtStr, sizeof(tgtStr), targetTempC);
+    int pwmPct = (int)(dutyCycle * 100.0f + 0.5f);
+
+    lcd.setCursor(0, 0);
+    snprintf(line, sizeof(line), "Current: %sC", curStr);
+    lcd.printPadded(line);
+
+    lcd.setCursor(0, 1);
+    snprintf(line, sizeof(line), "Target:  %sC", tgtStr);
+    lcd.printPadded(line);
+
+    lcd.setCursor(0, 2);
+    snprintf(line, sizeof(line), "Fan PWM: %d%%", pwmPct);
+    lcd.printPadded(line);
+
+    lcd.setCursor(0, 3);
+    lcd.printPadded("");
 }

@@ -182,7 +182,7 @@ int main(void)
 {
 
     buttonTimer.start(); // start the timer that's used for debouncing
-    
+
     // Setup an event queue to handle event requests for the ISR
     // and issue the callback in the event thread.
     EventQueue event_queue;
@@ -238,7 +238,7 @@ int main(void)
         printf("\n");
 
         // print to the screen
-        updateLCDvalues(lcd, cToF(getThermistorTemperature()));
+        updateLCDvalues(lcd, getThermistorTemperature(), targetTemp(TargetTempLevel), dutyCycle);
         
         wait_us(1000000); // Wait 1 second before repeating the loop.
     }
