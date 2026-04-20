@@ -15,9 +15,10 @@ AnalogIn TemperatureSensor(PA_1); //CN8/A1
 // PC_1 is CN8/A4
 InterruptIn UP_BUTTON(PB_5); //CN5/D4
 InterruptIn DOWN_BUTTON(PA_10); //CN5/D2
+InterruptIn STATUS_BUTTON(PA_8); //CN5/D7
 // DigitalOut OUTPUT(PB_4); //CN9/D5
 PwmOut fan(PB_3); //D3 PWM header for fan
-DigitalOut led(LED1);
+DigitalOut status_led(PC_4); // status LED
 
 // LEDs are connected to CN10 pins
 DigitalOut temp_red(PC_8);
@@ -28,11 +29,12 @@ DigitalOut fan_red(PA_12);
 DigitalOut fan_yellow(PA_11);
 DigitalOut fan_green(PB_12);
 
-
 #define Vsupply 3.32f // The microcontroller supplies 3.3 V
 
 int TargetTempLevel = 1; // default the target temp to 1
 int FanSpeedLevel = 1; // default to 1
+
+bool status = true;
 
 //variables for temperature sensor
 float TemperatureSensorDigiValue; //the A/D converter value read by the controller input pin
@@ -62,6 +64,13 @@ void DownPressed(void)
     }
 }
 
+// This function will be attached to the status button interrupt.
+void StatusPressed(void)
+{
+    status = !status; // flip the status
+    printf("Status Toggled: %d\n", status);
+}
+
 float cToF(float tempC) {
     return (tempC * 9.0f / 5.0f) + 32.0f;
 }
@@ -81,9 +90,10 @@ void setStrip(DigitalOut &red, DigitalOut &yellow, DigitalOut &green, int level)
     } else if (level == 2) {
         yellow = 1;
         green = 1;
-    } else {
+    } else if (level == 1) {
         green = 1;
     }
+    // if none of the above cases are true, the LEDs stay all off (case of fan speed 0)
 }
 
 
@@ -136,18 +146,21 @@ int setFanSpeed(int TargetTempLevel) {
     float diff = tempC - target;
 
     if (diff <= 1.0) {
-        return 1; // slowest fan speed
+        return 0; // slowest fan speed
     } else if (diff <= 4.0) {
+        return 1;
+    } else if (diff <= 7.0) {
         return 2;
-    } else if (diff > 4.0) {
+    } else if (diff > 7.0) {
         return 3;
     } else {
-        return 1; // default
+        return 0; // default
     }
 }
 
 int main(void)
 {
+
     // Setup an event queue to handle event requests for the ISR
     // and issue the callback in the event thread.
     EventQueue event_queue;
@@ -159,6 +172,7 @@ int main(void)
     // the event queue and exicuted on button press.
     UP_BUTTON.rise(event_queue.event(&UpPressed));
     DOWN_BUTTON.rise(event_queue.event(&DownPressed));
+    STATUS_BUTTON.rise(event_queue.event(&StatusPressed));
 
     // set up the PWM fan
     float dutyCycle = 0.15;
@@ -174,14 +188,25 @@ int main(void)
         // set the LEDs for the temperature level
         setStrip(temp_red, temp_yellow, temp_green, TargetTempLevel);
 
-        // check what the fan speed should be
-        FanSpeedLevel = setFanSpeed(TargetTempLevel);
-        // the setFanSpeed function handles reading the temperature
+        status_led = status;
+        if (!status) {
+            FanSpeedLevel = 0;
+        } else {
+            FanSpeedLevel = setFanSpeed(TargetTempLevel);
+        }
+
+        if (FanSpeedLevel == 0) {
+            dutyCycle = 0.0f;
+        } else {
+            dutyCycle = 0.05 + FanSpeedLevel * 0.10;
+        }
+        
+
         setStrip(fan_red, fan_yellow, fan_green, FanSpeedLevel); // set the fan strip lights as well
 
-        dutyCycle = 0.05 + FanSpeedLevel * 0.10;
+        
         fan.write(dutyCycle);
-       
+        
         // output measured temperature for debugging
         printf("\n");
         printf("\nCurrent Temperature Value: %f", getThermistorTemperature());
