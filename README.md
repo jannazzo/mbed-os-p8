@@ -59,6 +59,11 @@ All logic runs at 3.3 V. The LCD can be run at 3.3 V as well.
 | SDA | `D14` | SDA |
 | SCL | `D15` | SCL |
 
+## Hardware Diagram
+
+<img width="1788" height="620" alt="LTspice_AaAI5mMH4a" src="https://github.com/user-attachments/assets/f71a57ff-b89d-418e-89df-98668b37b8a1" />
+
+
 ## Software Architecture
 
 ```
